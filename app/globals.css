@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+  background-color: #F3EFDE;
+  /* This creates the "Overlay" effect so the scrollbar sits ON TOP of the footer/marquee */
+  overflow-y: overlay;
+}
+
+body {
+  background-color: #F3EFDE;
+  color: #0F0F0F;
+}
+
+:root {
+  --font-display: 'Courier New', Courier, monospace;
+  --font-mono: 'Courier New', Courier, monospace;
+}
+
+/* --- CUSTOM FLOATING SCROLLBAR --- */
+
+/* Width */
+::-webkit-scrollbar {
+  width: 10px; /* Slightly thinner */
+}
+
+/* Track (The Path) - Made Transparent */
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+/* Thumb (The Moving Part) */
+::-webkit-scrollbar-thumb {
+  background-color: #EB7A65; /* Brand Red */
+  border-radius: 20px;       /* Round shape */
+  border: 2px solid transparent; /* Makes it look smaller/floating */
+  background-clip: content-box;  /* Ensures the border works as padding */
+}
+
+/* Hover State */
+::-webkit-scrollbar-thumb:hover {
+  background-color: #d15f4a; /* Darker red on hover */
+}
