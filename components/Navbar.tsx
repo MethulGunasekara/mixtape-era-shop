@@ -17,14 +17,15 @@ export default function Navbar() {
           {/* Logo Section */}
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center gap-3 group">
-              {/* Ensure your file is inside the 'public' folder and named exactly this */}
+              {/* Logo Image */}
               <img 
                 src="/mixtapeEraLogo.png" 
                 alt="Mixtape Era" 
-                className="h-12 w-auto object-contain group-hover:scale-105 transition-transform" 
+                className="h-10 w-auto object-contain" 
               />
-              {/* Fallback Text in case image breaks, visible but subtle */}
-              <span className="font-display text-2xl font-bold tracking-tight hidden md:block">
+              
+              {/* FIXED: Removed 'hidden' so this text shows on Mobile too */}
+              <span className="font-display text-xl md:text-2xl font-bold tracking-tight block text-brand-black">
                 MIXTAPE ERA
               </span>
             </a>
@@ -47,8 +48,16 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          {/* Mobile Menu Button + Cart Icon */}
+          <div className="md:hidden flex items-center gap-4">
+            {/* Mobile Cart Button */}
+            <button 
+              onClick={toggleCart}
+              className="text-sm font-bold font-mono bg-brand-red text-white px-3 py-1 border-2 border-brand-black rounded"
+            >
+              CART ({cartCount})
+            </button>
+
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 border-2 border-brand-black rounded-md hover:shadow-button transition-shadow bg-white"
@@ -58,7 +67,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu Dropdown */}
         {isMenuOpen && (
           <div className="md:hidden border-t-2 border-brand-black py-4 space-y-4 bg-brand-cream">
             <a href="#shop" className="block font-mono text-sm hover:underline px-2 font-bold" onClick={() => setIsMenuOpen(false)}>
@@ -67,15 +76,6 @@ export default function Navbar() {
             <a href="#about" className="block font-mono text-sm hover:underline px-2 font-bold" onClick={() => setIsMenuOpen(false)}>
               ABOUT
             </a>
-            <button 
-              onClick={() => {
-                setIsMenuOpen(false);
-                toggleCart();
-              }}
-              className="block font-mono text-sm hover:underline w-full text-left px-2 font-bold text-brand-red"
-            >
-              CART ({cartCount})
-            </button>
           </div>
         )}
       </div>

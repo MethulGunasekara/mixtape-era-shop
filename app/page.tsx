@@ -27,24 +27,26 @@ export default function Home() {
       <section className="relative w-full h-[600px] bg-brand-cream border-b-4 border-brand-black overflow-hidden flex items-center justify-center">
         
         {/* The Central "Poster" Container */}
-        <div className="relative z-20">
+        <div className="relative z-20 scale-90 md:scale-100">
           
-          {/* 1. Floating Cassette */}
+          {/* 1. Floating Cassette (FIXED POSITIONS) */}
+          {/* Mobile: -top-16 (visible) | Desktop: -top-32 (far out) */}
           <img 
             src="/cassette.png" 
             alt="Tape"
-            className="absolute -top-32 -left-28 w-40 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow"
+            className="absolute -top-16 -left-6 w-32 md:-top-32 md:-left-28 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow"
           />
 
-          {/* 2. Floating Boombox */}
+          {/* 2. Floating Boombox (FIXED POSITIONS) */}
+          {/* Mobile: -bottom-20 (visible) | Desktop: -bottom-36 (far out) */}
           <img 
             src="/boombox.png" 
             alt="Boombox"
-            className="absolute -bottom-36 -right-40 w-48 md:w-72 rotate-6 drop-shadow-xl z-30 animate-float-delayed"
+            className="absolute -bottom-20 -right-6 w-40 md:-bottom-36 md:-right-40 md:w-72 rotate-6 drop-shadow-xl z-30 animate-float-delayed"
           />
 
           {/* The Text Box */}
-          <div className="bg-brand-red border-4 border-brand-black p-10 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)] text-center transform hover:scale-105 transition-transform duration-300 relative z-20">
+          <div className="bg-brand-red border-4 border-brand-black p-8 md:p-10 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)] text-center transform hover:scale-105 transition-transform duration-300 relative z-20">
             <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase text-brand-black leading-[0.9]">
               STICK TO<br/>THE VIBE
             </h1>
@@ -67,7 +69,7 @@ export default function Home() {
       </section>
       {/* --- HERO SCENE END --- */}
 
-      {/* Shop Grid - NOW WITH ID="SHOP" */}
+      {/* Shop Grid */}
       <section id="shop" className="max-w-7xl mx-auto px-6 py-16 scroll-mt-20">
         <h2 className="text-4xl font-black mb-12 uppercase border-l-8 border-brand-red pl-4">Featured Drops</h2>
         
