@@ -29,20 +29,18 @@ export default function Home() {
         {/* The Central "Poster" Container */}
         <div className="relative z-20 scale-90 md:scale-100">
           
-          {/* 1. Floating Cassette (FIXED POSITIONS) */}
-          {/* Mobile: -top-16 (visible) | Desktop: -top-32 (far out) */}
+          {/* 1. Floating Cassette (MOBILE ADJUSTED: LARGER & FURTHER LEFT) */}
           <img 
             src="/cassette.png" 
             alt="Tape"
-            className="absolute -top-16 -left-6 w-32 md:-top-32 md:-left-28 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow"
+            className="absolute -top-24 -left-10 w-44 md:-top-32 md:-left-28 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow"
           />
 
-          {/* 2. Floating Boombox (FIXED POSITIONS) */}
-          {/* Mobile: -bottom-20 (visible) | Desktop: -bottom-36 (far out) */}
+          {/* 2. Floating Boombox (MOBILE ADJUSTED: LARGER & FURTHER RIGHT) */}
           <img 
             src="/boombox.png" 
             alt="Boombox"
-            className="absolute -bottom-20 -right-6 w-40 md:-bottom-36 md:-right-40 md:w-72 rotate-6 drop-shadow-xl z-30 animate-float-delayed"
+            className="absolute -bottom-28 -right-10 w-52 md:-bottom-36 md:-right-40 md:w-72 rotate-6 drop-shadow-xl z-30 animate-float-delayed"
           />
 
           {/* The Text Box */}
