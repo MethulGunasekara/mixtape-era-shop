@@ -2,9 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
-import { Pencil, Trash2, X } from 'lucide-react';
+import { Pencil, Trash2, X, Plus, Image as ImageIcon } from 'lucide-react';
 
-// Define the shape of a Product
 interface Product {
   id: number;
   title: string;
@@ -13,7 +12,7 @@ interface Product {
   description: string;
   badge_text: string | null;
   badge_type: string | null;
-  gallery: string[];
+  gallery: string[]; // WE ARE USING THIS NOW
 }
 
 export default function Dashboard() {
@@ -21,6 +20,7 @@ export default function Dashboard() {
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
+  const [galleryLines, setGalleryLines] = useState(''); // For the Gallery Textarea
   const [description, setDescription] = useState('');
   const [badgeText, setBadgeText] = useState('');
   const [badgeType, setBadgeType] = useState('none');
@@ -30,7 +30,6 @@ export default function Dashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Load products on mount
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -47,33 +46,33 @@ export default function Dashboard() {
     setTitle('');
     setPrice('');
     setImage('');
+    setGalleryLines('');
     setDescription('');
     setBadgeText('');
     setBadgeType('none');
     setEditingId(null);
   };
 
-  // Populate form for Editing
   const handleEdit = (product: Product) => {
     setEditingId(product.id);
     setTitle(product.title);
     setPrice(product.price);
     setImage(product.image_url || '');
+    // Join the gallery array into a string (one per line)
+    setGalleryLines(product.gallery ? product.gallery.join('\n') : '');
     setDescription(product.description || '');
     setBadgeText(product.badge_text || '');
     setBadgeType(product.badge_type || 'none');
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this drop?')) return;
-
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) {
       alert('Error deleting: ' + error.message);
     } else {
-      fetchProducts(); // Refresh list
+      fetchProducts();
     }
   };
 
@@ -81,10 +80,17 @@ export default function Dashboard() {
     e.preventDefault();
     setLoading(true);
 
+    // Convert Gallery text area back into an Array
+    const galleryArray = galleryLines
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url !== '');
+
     const productData = {
       title,
       price,
       image_url: image,
+      gallery: galleryArray, // Save the gallery
       description,
       badge_text: badgeText || null,
       badge_type: badgeType,
@@ -93,14 +99,12 @@ export default function Dashboard() {
     let error;
 
     if (editingId) {
-      // UPDATE existing product
       const { error: updateError } = await supabase
         .from('products')
         .update(productData)
         .eq('id', editingId);
       error = updateError;
     } else {
-      // CREATE new product
       const { error: insertError } = await supabase
         .from('products')
         .insert([productData]);
@@ -112,7 +116,7 @@ export default function Dashboard() {
     } else {
       alert(editingId ? 'Drop Updated!' : 'Drop Published!');
       resetForm();
-      fetchProducts(); // Refresh list
+      fetchProducts();
     }
     setLoading(false);
   };
@@ -137,33 +141,78 @@ export default function Dashboard() {
           </div>
 
           <form onSubmit={handleUpload} className="space-y-6">
+            {/* Title & Price */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Title */}
               <div>
                 <label className="block font-bold mb-2 uppercase">Product Title</label>
                 <input 
                   type="text" 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold focus:bg-brand-yellow/20 outline-none"
                   placeholder="Ex: Holo Skull"
                   required
                 />
               </div>
-
-              {/* Price */}
               <div>
                 <label className="block font-bold mb-2 uppercase">Price</label>
                 <input 
                   type="text" 
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold focus:bg-brand-yellow/20 outline-none"
-                  placeholder="1500" // No currency symbol
+                  placeholder="1500"
                   required
                 />
+              </div>
+            </div>
+
+            {/* --- IMAGES SECTION --- */}
+            <div className="bg-gray-50 p-6 border-2 border-brand-black border-dashed">
+              <h3 className="font-bold uppercase mb-4 text-brand-red flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" /> Images
+              </h3>
+              
+              {/* Main Thumbnail */}
+              <div className="mb-6">
+                <label className="block font-bold mb-2 uppercase text-sm">Thumbnail / Main Image (Path)</label>
+                <div className="flex gap-4 items-start">
+                  <input 
+                    type="text" 
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    className="flex-1 bg-white border-2 border-brand-black p-3 font-bold focus:bg-brand-yellow/20 outline-none"
+                    placeholder="/sticker1.png"
+                    required
+                  />
+                  {/* Live Preview Box */}
+                  <div className="w-12 h-12 border-2 border-brand-black bg-white flex items-center justify-center overflow-hidden shrink-0">
+                    {image ? (
+                      <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-gray-300">PRE</span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 font-bold">
+                  * Must be a path (e.g. /sticker1.png) or a URL. Cannot paste files directly.
+                </p>
+              </div>
+
+              {/* Gallery */}
+              <div>
+                <label className="block font-bold mb-2 uppercase text-sm">
+                  Gallery Images (Optional)
+                </label>
+                <textarea 
+                  value={galleryLines}
+                  onChange={(e) => setGalleryLines(e.target.value)}
+                  className="w-full bg-white border-2 border-brand-black p-3 font-bold h-24 focus:bg-brand-yellow/20 outline-none resize-y"
+                  placeholder={`/sticker1-back.png\n/sticker1-side.png\n(One URL per line)`}
+                />
+                <p className="text-xs text-gray-500 mt-1 font-bold">
+                  * Paste one image link per line.
+                </p>
               </div>
             </div>
 
@@ -175,20 +224,6 @@ export default function Dashboard() {
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold h-24 focus:bg-brand-yellow/20 outline-none resize-none"
                 placeholder="Details about the sticker..."
-              />
-            </div>
-
-            {/* Image Path */}
-            <div>
-              <label className="block font-bold mb-2 uppercase">Image Path</label>
-              <input 
-                type="text" 
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-                className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold focus:bg-brand-yellow/20 outline-none"
-                placeholder="/sticker1.png"
-                required
               />
             </div>
 
@@ -219,7 +254,6 @@ export default function Dashboard() {
                         type="number" 
                         value={badgeText}
                         onChange={(e) => setBadgeText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                         className="w-full bg-white border-2 border-brand-black p-3 font-bold outline-none"
                         placeholder="20"
                       />
@@ -267,11 +301,11 @@ export default function Dashboard() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold uppercase truncate">{product.title}</h3>
                 <p className="text-sm text-brand-red font-mono font-bold">{product.price}</p>
-                {product.badge_type !== 'none' && (
-                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-sm font-bold text-gray-600">
-                    {product.badge_type}: {product.badge_text}
-                  </span>
-                )}
+                <div className="flex gap-2 text-xs text-gray-500 font-bold mt-1">
+                  {product.gallery && product.gallery.length > 0 && (
+                     <span className="flex items-center gap-1"><Plus className="w-3 h-3"/> {product.gallery.length} extra images</span>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-2">
