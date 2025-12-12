@@ -29,14 +29,14 @@ export default function Home() {
         {/* The Central "Poster" Container */}
         <div className="relative z-20 scale-90 md:scale-100">
           
-          {/* 1. Floating Cassette (MOBILE: -left-24) */}
+          {/* 1. Floating Cassette (LEFT STAYED AT -20) */}
           <img 
             src="/cassette.png" 
             alt="Tape"
-            className="absolute -top-24 -left-24 w-44 md:-top-32 md:-left-28 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow"
+            className="absolute -top-24 -left-20 w-44 md:-top-32 md:-left-28 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow"
           />
 
-          {/* 2. Floating Boombox (MOBILE: -right-24) */}
+          {/* 2. Floating Boombox (RIGHT MOVED TO -24) */}
           <img 
             src="/boombox.png" 
             alt="Boombox"
