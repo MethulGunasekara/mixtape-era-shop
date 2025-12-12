@@ -17,12 +17,14 @@ export default function Navbar() {
           {/* Logo Section */}
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center gap-3 group">
+              {/* Ensure your file is inside the 'public' folder and named exactly this */}
               <img 
                 src="/mixtapeEraLogo.png" 
-                alt="Mixtape Era Logo" 
+                alt="Mixtape Era" 
                 className="h-12 w-auto object-contain group-hover:scale-105 transition-transform" 
               />
-              <span className="font-display text-2xl font-bold tracking-tight">
+              {/* Fallback Text in case image breaks, visible but subtle */}
+              <span className="font-display text-2xl font-bold tracking-tight hidden md:block">
                 MIXTAPE ERA
               </span>
             </a>
@@ -36,7 +38,6 @@ export default function Navbar() {
             <a href="#about" className="font-mono text-sm hover:underline font-bold">
               ABOUT
             </a>
-            {/* FAN CLUB REMOVED */}
             
             <button 
               onClick={toggleCart}
