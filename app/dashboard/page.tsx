@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
+import { useRouter } from 'next/navigation'; // <--- 1. Import Router
 import { Pencil, Trash2, X, Plus, Image as ImageIcon, UploadCloud } from 'lucide-react';
 
 interface Product {
@@ -16,10 +17,12 @@ interface Product {
 }
 
 export default function Dashboard() {
+  const router = useRouter(); // <--- 2. Initialize Router
+  
   // Form State
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-  const [image, setImage] = useState(''); // Stores the URL (either from upload or pasted)
+  const [image, setImage] = useState(''); 
   const [galleryLines, setGalleryLines] = useState('');
   const [description, setDescription] = useState('');
   const [badgeText, setBadgeText] = useState('');
@@ -27,9 +30,22 @@ export default function Dashboard() {
   
   // App State
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false); // NEW: Track upload status
+  const [uploading, setUploading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // --- 3. THE SECURITY CHECK ---
+  useEffect(() => {
+    const checkUser = async () => {
+      // Check if user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // If not logged in, kick them to the login page
+        router.push('/login');
+      }
+    };
+    checkUser();
+  }, [router]);
 
   useEffect(() => {
     fetchProducts();
@@ -66,23 +82,22 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- NEW: UPLOAD FUNCTION (Targets 'stickers' bucket) ---
+  // --- UPLOAD FUNCTION (Targets 'stickers' bucket) ---
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
       if (!e.target.files || e.target.files.length === 0) {
-        return; // No file selected
+        return; 
       }
 
       const file = e.target.files[0];
       const fileExt = file.name.split('.').pop();
-      // Generate unique name: timestamp-random.ext
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       // 1. Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('stickers') // YOUR BUCKET NAME
+        .from('stickers')
         .upload(filePath, file);
 
       if (uploadError) {
@@ -94,7 +109,6 @@ export default function Dashboard() {
         .from('stickers')
         .getPublicUrl(filePath);
 
-      // 3. Auto-fill the image field
       setImage(data.publicUrl);
       
     } catch (error: any) {
@@ -203,7 +217,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* --- IMAGES SECTION (WITH UPLOAD BUTTON) --- */}
+            {/* --- IMAGES SECTION --- */}
             <div className="bg-gray-50 p-6 border-2 border-brand-black border-dashed">
               <h3 className="font-bold uppercase mb-4 text-brand-red flex items-center gap-2">
                 <ImageIcon className="w-5 h-5" /> Images
@@ -214,7 +228,7 @@ export default function Dashboard() {
                 <label className="block font-bold mb-2 uppercase text-sm">Thumbnail / Main Image</label>
                 
                 <div className="flex gap-4 items-center">
-                  {/* The Upload Button Box */}
+                  {/* The Upload Button */}
                   <div className="relative flex-1 group">
                     <input 
                       type="file" 
@@ -231,7 +245,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Live Preview Box */}
+                  {/* Live Preview */}
                   <div className="w-16 h-16 border-2 border-brand-black bg-white flex items-center justify-center overflow-hidden shrink-0 relative">
                     {image ? (
                       <img src={image} alt="Preview" className="w-full h-full object-cover" />
@@ -241,7 +255,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Fallback Text Input (Hidden logic but visible if you want to paste links) */}
                 <input 
                   type="text" 
                   value={image}
@@ -376,10 +389,6 @@ export default function Dashboard() {
               </div>
             </div>
           ))}
-
-          {products.length === 0 && (
-            <p className="text-gray-500 font-bold text-center py-10">No drops found. Start publishing!</p>
-          )}
         </div>
 
       </div>
