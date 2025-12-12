@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
-import { Pencil, Trash2, X, Plus, Image as ImageIcon } from 'lucide-react';
+import { Pencil, Trash2, X, Plus, Image as ImageIcon, UploadCloud } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -12,21 +12,22 @@ interface Product {
   description: string;
   badge_text: string | null;
   badge_type: string | null;
-  gallery: string[]; // WE ARE USING THIS NOW
+  gallery: string[];
 }
 
 export default function Dashboard() {
   // Form State
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-  const [image, setImage] = useState('');
-  const [galleryLines, setGalleryLines] = useState(''); // For the Gallery Textarea
+  const [image, setImage] = useState(''); // Stores the URL (either from upload or pasted)
+  const [galleryLines, setGalleryLines] = useState('');
   const [description, setDescription] = useState('');
   const [badgeText, setBadgeText] = useState('');
   const [badgeType, setBadgeType] = useState('none');
   
   // App State
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false); // NEW: Track upload status
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -58,12 +59,49 @@ export default function Dashboard() {
     setTitle(product.title);
     setPrice(product.price);
     setImage(product.image_url || '');
-    // Join the gallery array into a string (one per line)
     setGalleryLines(product.gallery ? product.gallery.join('\n') : '');
     setDescription(product.description || '');
     setBadgeText(product.badge_text || '');
     setBadgeType(product.badge_type || 'none');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // --- NEW: UPLOAD FUNCTION (Targets 'stickers' bucket) ---
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      if (!e.target.files || e.target.files.length === 0) {
+        return; // No file selected
+      }
+
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      // Generate unique name: timestamp-random.ext
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // 1. Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('stickers') // YOUR BUCKET NAME
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // 2. Get Public URL
+      const { data } = supabase.storage
+        .from('stickers')
+        .getPublicUrl(filePath);
+
+      // 3. Auto-fill the image field
+      setImage(data.publicUrl);
+      
+    } catch (error: any) {
+      alert('Error uploading image: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -80,7 +118,6 @@ export default function Dashboard() {
     e.preventDefault();
     setLoading(true);
 
-    // Convert Gallery text area back into an Array
     const galleryArray = galleryLines
       .split('\n')
       .map(url => url.trim())
@@ -90,7 +127,7 @@ export default function Dashboard() {
       title,
       price,
       image_url: image,
-      gallery: galleryArray, // Save the gallery
+      gallery: galleryArray,
       description,
       badge_text: badgeText || null,
       badge_type: badgeType,
@@ -141,7 +178,6 @@ export default function Dashboard() {
           </div>
 
           <form onSubmit={handleUpload} className="space-y-6">
-            {/* Title & Price */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block font-bold mb-2 uppercase">Product Title</label>
@@ -167,7 +203,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* --- IMAGES SECTION --- */}
+            {/* --- IMAGES SECTION (WITH UPLOAD BUTTON) --- */}
             <div className="bg-gray-50 p-6 border-2 border-brand-black border-dashed">
               <h3 className="font-bold uppercase mb-4 text-brand-red flex items-center gap-2">
                 <ImageIcon className="w-5 h-5" /> Images
@@ -175,18 +211,28 @@ export default function Dashboard() {
               
               {/* Main Thumbnail */}
               <div className="mb-6">
-                <label className="block font-bold mb-2 uppercase text-sm">Thumbnail / Main Image (Path)</label>
-                <div className="flex gap-4 items-start">
-                  <input 
-                    type="text" 
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    className="flex-1 bg-white border-2 border-brand-black p-3 font-bold focus:bg-brand-yellow/20 outline-none"
-                    placeholder="/sticker1.png"
-                    required
-                  />
+                <label className="block font-bold mb-2 uppercase text-sm">Thumbnail / Main Image</label>
+                
+                <div className="flex gap-4 items-center">
+                  {/* The Upload Button Box */}
+                  <div className="relative flex-1 group">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className={`w-full bg-white border-2 border-brand-black p-3 font-bold flex items-center justify-center gap-2 text-sm transition-all ${
+                      uploading ? 'bg-gray-200 text-gray-500' : 'group-hover:bg-brand-yellow group-hover:text-brand-black'
+                    }`}>
+                      <UploadCloud className={`w-5 h-5 ${uploading ? 'animate-bounce' : ''}`} />
+                      {uploading ? 'UPLOADING...' : 'CLICK TO UPLOAD FILE'}
+                    </div>
+                  </div>
+
                   {/* Live Preview Box */}
-                  <div className="w-12 h-12 border-2 border-brand-black bg-white flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-16 h-16 border-2 border-brand-black bg-white flex items-center justify-center overflow-hidden shrink-0 relative">
                     {image ? (
                       <img src={image} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -194,25 +240,29 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 font-bold">
-                  * Must be a path (e.g. /sticker1.png) or a URL. Cannot paste files directly.
-                </p>
+
+                {/* Fallback Text Input (Hidden logic but visible if you want to paste links) */}
+                <input 
+                  type="text" 
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
+                  className="w-full mt-2 bg-transparent border-b-2 border-gray-300 p-2 text-xs font-mono text-gray-500 outline-none focus:border-brand-black placeholder:text-gray-300"
+                  placeholder="Or paste image URL manually..."
+                  required
+                />
               </div>
 
               {/* Gallery */}
               <div>
                 <label className="block font-bold mb-2 uppercase text-sm">
-                  Gallery Images (Optional)
+                  Gallery Links (One per line)
                 </label>
                 <textarea 
                   value={galleryLines}
                   onChange={(e) => setGalleryLines(e.target.value)}
                   className="w-full bg-white border-2 border-brand-black p-3 font-bold h-24 focus:bg-brand-yellow/20 outline-none resize-y"
-                  placeholder={`/sticker1-back.png\n/sticker1-side.png\n(One URL per line)`}
+                  placeholder={`To add more images: Upload one above -> Copy the link from the box -> Paste here -> Repeat.`}
                 />
-                <p className="text-xs text-gray-500 mt-1 font-bold">
-                  * Paste one image link per line.
-                </p>
               </div>
             </div>
 
@@ -272,7 +322,7 @@ export default function Dashboard() {
 
             <button 
               type="submit" 
-              disabled={loading}
+              disabled={loading || uploading}
               className={`w-full border-2 border-brand-black py-4 font-black uppercase tracking-widest hover:translate-y-1 shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] transition-all disabled:opacity-50 ${
                 editingId ? 'bg-brand-yellow' : 'bg-brand-red'
               }`}
