@@ -24,28 +24,24 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
   const { addToCart } = useCart();
   const [showAdded, setShowAdded] = useState(false);
 
-  // State for interactivity (Changing price/image on the card)
-  const [currentImage, setCurrentImage] = useState(image);
+  // State: Only track Price and Selected Variant Name. Image is static.
   const [currentPrice, setCurrentPrice] = useState(price);
   const [selectedVariantName, setSelectedVariantName] = useState<string | null>(null);
 
-  // Initialize: If variants exist, set the first one active by default (usually lowest price)
+  // Initialize
   useEffect(() => {
     if (variants && variants.length > 0) {
-      setCurrentImage(variants[0].image_url);
       setCurrentPrice(variants[0].price);
       setSelectedVariantName(variants[0].name);
     } else {
-      setCurrentImage(image);
       setCurrentPrice(price);
     }
-  }, [variants, image, price]);
+  }, [variants, price]);
 
-  // Handle switching types on the card
   const handleVariantClick = (e: React.MouseEvent, variant: Variant) => {
-    e.preventDefault(); // Don't open the product page
+    e.preventDefault(); 
     e.stopPropagation();
-    setCurrentImage(variant.image_url);
+    // ONLY change price, NOT the image
     setCurrentPrice(variant.price);
     setSelectedVariantName(variant.name);
   };
@@ -66,7 +62,6 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
   };
   const sunburstPath = generateStarPath(16, 48, 38); 
 
-  // Price Calculation for badges
   const calculateDisplayPrice = () => {
     const priceValue = parseFloat(currentPrice.replace(/[^0-9.]/g, '')) || 0;
     if (badge_type === 'discount' && badge_text) {
@@ -80,7 +75,6 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
   };
   const finalPrice = calculateDisplayPrice();
 
-  // Add the SELECTED variant to cart
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -88,7 +82,7 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
       id,
       title,
       price: finalPrice,
-      image_url: currentImage,
+      image_url: image, // Always use the Main Thumbnail
       variant: selectedVariantName || 'Standard'
     });
     setShowAdded(true);
@@ -115,16 +109,16 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
           </div>
         )}
         
-        {/* Dynamic Image */}
+        {/* Static Main Image */}
         <div className="h-64 bg-gray-200 border-2 border-brand-black mb-4 flex items-center justify-center relative overflow-hidden shrink-0">
-          {currentImage ? (
-            <img src={currentImage} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          {image ? (
+            <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <span className="text-gray-400 font-mono">NO IMG</span>
           )}
         </div>
 
-        {/* VARIANT BUTTONS (Shown on Grid!) */}
+        {/* VARIANT BUTTONS */}
         {variants && variants.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {variants.map((v, i) => (
@@ -143,7 +137,7 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
           </div>
         )}
         
-        {/* Title & Price & Add Button */}
+        {/* Footer */}
         <div className="mt-auto flex justify-between items-end">
           <div>
             <h3 className="text-xl font-bold uppercase leading-none mb-1">{title}</h3>
