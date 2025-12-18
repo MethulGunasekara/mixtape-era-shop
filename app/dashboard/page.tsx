@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, X, Plus, Image as ImageIcon, UploadCloud, Layers } from 'lucide-react';
+import { Pencil, Trash2, X, Image as ImageIcon, UploadCloud, Layers } from 'lucide-react';
 
 interface Variant {
   name: string;
@@ -20,7 +20,7 @@ interface Product {
   badge_text: string | null;
   badge_type: string | null;
   gallery: string[];
-  variants: Variant[]; // New Column
+  variants: Variant[];
 }
 
 export default function Dashboard() {
@@ -31,8 +31,8 @@ export default function Dashboard() {
   const [description, setDescription] = useState('');
   const [badgeText, setBadgeText] = useState('');
   const [badgeType, setBadgeType] = useState('none');
-  const [galleryLines, setGalleryLines] = useState('');
-  
+  // Removed galleryLines state
+
   // --- VARIANT STATE ---
   const [variants, setVariants] = useState<Variant[]>([]);
   const [vName, setVName] = useState('');
@@ -69,7 +69,6 @@ export default function Dashboard() {
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setGalleryLines('');
     setBadgeText('');
     setBadgeType('none');
     setVariants([]);
@@ -83,7 +82,6 @@ export default function Dashboard() {
     setEditingId(product.id);
     setTitle(product.title);
     setDescription(product.description || '');
-    setGalleryLines(product.gallery ? product.gallery.join('\n') : '');
     setBadgeText(product.badge_text || '');
     setBadgeType(product.badge_type || 'none');
     // Load variants if they exist
@@ -150,19 +148,17 @@ export default function Dashboard() {
       parseFloat(a.price) - parseFloat(b.price)
     );
     const mainPrice = sortedVariants[0].price; // Lowest price
-    const mainImage = variants[0].image_url;   // Use first variant as cover
-
-    const galleryArray = galleryLines.split('\n').map(u => u.trim()).filter(u => u !== '');
+    const mainImage = variants[0].image_url;   // Use first variant as thumbnail
 
     const productData = {
       title,
       description,
       badge_text: badgeText || null,
       badge_type: badgeType,
-      gallery: galleryArray,
-      variants: variants, // Save the array
-      price: mainPrice,   // Auto-set for frontend sorting
-      image_url: mainImage // Auto-set for frontend display
+      gallery: [], // Always empty now
+      variants: variants, 
+      price: mainPrice,   
+      image_url: mainImage 
     };
 
     let error;
@@ -216,7 +212,7 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* 2. VARIANTS MANAGER (The New Core Feature) */}
+            {/* 2. VARIANTS MANAGER */}
             <div className="bg-blue-50 p-6 border-2 border-brand-black">
               <h3 className="font-bold uppercase mb-4 text-brand-black flex items-center gap-2">
                 <Layers className="w-5 h-5" /> Product Types / Sizes
@@ -267,6 +263,7 @@ export default function Dashboard() {
                 ))}
                 {variants.length === 0 && <p className="text-sm text-gray-500 italic text-center">No types added yet. Add at least one.</p>}
               </div>
+              <p className="text-xs text-gray-400 mt-2 font-bold">* The first image above will be the Main Thumbnail.</p>
             </div>
 
             {/* Description */}
@@ -276,16 +273,6 @@ export default function Dashboard() {
                 value={description} onChange={(e) => setDescription(e.target.value)}
                 className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold h-24 focus:bg-brand-yellow/20 outline-none resize-none"
                 placeholder="Details about the sticker..."
-              />
-            </div>
-
-            {/* Extra Gallery */}
-            <div>
-              <label className="block font-bold mb-2 uppercase text-sm">Extra Gallery Links (Optional)</label>
-              <textarea 
-                value={galleryLines} onChange={(e) => setGalleryLines(e.target.value)}
-                className="w-full bg-gray-100 border-2 border-brand-black p-3 font-mono text-xs h-20"
-                placeholder="One URL per line..."
               />
             </div>
 
