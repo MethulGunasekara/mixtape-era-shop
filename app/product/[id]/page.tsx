@@ -39,14 +39,14 @@ export default function ProductPage() {
         
       if (data) {
         setProduct(data);
-        // Initialize with the first variant (lowest price usually)
+        // Default to first variant (Lowest Price)
         if (data.variants && data.variants.length > 0) {
           const firstVar = data.variants[0];
           setSelectedVariant(firstVar);
           setDisplayImage(firstVar.image_url);
           setDisplayPrice(firstVar.price);
         } else {
-          // Fallback if no variants
+          // Fallback
           setDisplayImage(data.image_url);
           setDisplayPrice(data.price);
         }
@@ -100,7 +100,7 @@ export default function ProductPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           
-          {/* LEFT: Dynamic Image */}
+          {/* LEFT: Dynamic Image (Changes when buttons are clicked) */}
           <div className="relative">
              <div className="aspect-square bg-white border-4 border-brand-black shadow-[12px_12px_0px_0px_rgba(15,15,15,1)] overflow-hidden flex items-center justify-center">
                <img 
@@ -115,27 +115,31 @@ export default function ProductPage() {
           <div>
             <h1 className="text-4xl md:text-5xl font-black uppercase leading-none mb-4">{product.title}</h1>
             
-            {/* Dynamic Price */}
+            {/* Dynamic Price (Changes when buttons are clicked) */}
             <p className="text-3xl font-mono font-bold text-brand-red mb-8 border-b-4 border-brand-black inline-block pb-1">
               {displayPrice} LKR
             </p>
 
-            {/* --- SELECT TYPE (BUTTONS) --- */}
+            {/* --- VARIANT BUTTONS (Placed ABOVE Description) --- */}
             {product.variants && product.variants.length > 0 && (
-              <div className="mb-8">
-                <label className="block font-bold uppercase mb-3 text-sm tracking-wider">Select Pack Size:</label>
+              <div className="mb-8 p-4 bg-white border-2 border-brand-black">
+                <label className="block font-bold uppercase mb-3 text-sm tracking-wider text-gray-500">
+                  Select Type:
+                </label>
                 <div className="flex flex-wrap gap-3">
                   {product.variants.map((v: Variant, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => handleVariantClick(v)}
-                      className={`px-6 py-3 border-4 font-bold uppercase transition-all transform hover:-translate-y-1 ${
+                      className={`px-4 py-2 border-2 font-bold uppercase transition-all flex flex-col items-center ${
                         selectedVariant?.name === v.name
-                          ? 'bg-brand-black text-white border-brand-black shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
-                          : 'bg-white text-brand-black border-brand-black hover:bg-brand-yellow shadow-[4px_4px_0px_0px_rgba(15,15,15,1)]'
+                          ? 'bg-brand-black text-white border-brand-black shadow-[4px_4px_0px_0px_rgba(150,150,150,1)]'
+                          : 'bg-gray-50 text-brand-black border-brand-black hover:bg-brand-yellow hover:shadow-[4px_4px_0px_0px_rgba(15,15,15,1)]'
                       }`}
                     >
-                      {v.name}
+                      <span className="text-sm">{v.name}</span>
+                      {/* Optional: Show small price difference on button */}
+                      <span className="text-[10px] opacity-70 font-mono">{v.price}</span>
                     </button>
                   ))}
                 </div>

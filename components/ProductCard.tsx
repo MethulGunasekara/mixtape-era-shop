@@ -1,20 +1,56 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useCart } from '@/context/CartContext';
+
+interface Variant {
+  name: string;
+  price: string;
+  image_url: string;
+}
 
 interface ProductProps {
   id: number;
   title: string;
-  price: string;       // This is the "Lowest Price" saved from dashboard
-  image: string;       // This is the "Main Thumbnail"
+  price: string;       
+  image: string;       
   badge_text?: string | null;
   badge_type?: string | null;
+  variants?: Variant[]; 
 }
 
-export default function ProductCard({ id, title, price, image, badge_text, badge_type }: ProductProps) {
+export default function ProductCard({ id, title, price, image, badge_text, badge_type, variants }: ProductProps) {
+  const { addToCart } = useCart();
+  const [showAdded, setShowAdded] = useState(false);
 
-  // --- BADGE DRAWING (Standard) ---
+  // State for interactivity (Changing price/image on the card)
+  const [currentImage, setCurrentImage] = useState(image);
+  const [currentPrice, setCurrentPrice] = useState(price);
+  const [selectedVariantName, setSelectedVariantName] = useState<string | null>(null);
+
+  // Initialize: If variants exist, set the first one active by default (usually lowest price)
+  useEffect(() => {
+    if (variants && variants.length > 0) {
+      setCurrentImage(variants[0].image_url);
+      setCurrentPrice(variants[0].price);
+      setSelectedVariantName(variants[0].name);
+    } else {
+      setCurrentImage(image);
+      setCurrentPrice(price);
+    }
+  }, [variants, image, price]);
+
+  // Handle switching types on the card
+  const handleVariantClick = (e: React.MouseEvent, variant: Variant) => {
+    e.preventDefault(); // Don't open the product page
+    e.stopPropagation();
+    setCurrentImage(variant.image_url);
+    setCurrentPrice(variant.price);
+    setSelectedVariantName(variant.name);
+  };
+
+  // --- BADGE DRAWING ---
   const generateStarPath = (points: number, outerRadius: number, innerRadius: number) => {
     let path = "";
     const centerX = 50; const centerY = 50;
@@ -30,9 +66,9 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
   };
   const sunburstPath = generateStarPath(16, 48, 38); 
 
-  // Price Logic for Discount Badge
+  // Price Calculation for badges
   const calculateDisplayPrice = () => {
-    const priceValue = parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
+    const priceValue = parseFloat(currentPrice.replace(/[^0-9.]/g, '')) || 0;
     if (badge_type === 'discount' && badge_text) {
       const discountMatch = badge_text.match(/(\d+)/);
       const discountPercent = discountMatch ? parseFloat(discountMatch[1]) : 0;
@@ -44,11 +80,26 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
   };
   const finalPrice = calculateDisplayPrice();
 
+  // Add the SELECTED variant to cart
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart({
+      id,
+      title,
+      price: finalPrice,
+      image_url: currentImage,
+      variant: selectedVariantName || 'Standard'
+    });
+    setShowAdded(true);
+    setTimeout(() => setShowAdded(false), 1000);
+  };
+
   return (
     <Link href={`/product/${id}`} className="block h-full">
       <div className="group bg-white border-4 border-brand-black p-4 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(15,15,15,1)] transition-all cursor-pointer relative flex flex-col h-full">
         
-        {/* Badge Layer */}
+        {/* Badge */}
         {badge_text && badge_type && badge_type !== 'none' && (
           <div className={`absolute z-10 -rotate-12 ${badge_type === 'offer' ? '-top-10 -left-10 w-32 h-32' : '-top-4 -left-4'}`}>
             {badge_type === 'discount' ? (
@@ -64,23 +115,48 @@ export default function ProductCard({ id, title, price, image, badge_text, badge
           </div>
         )}
         
-        {/* Main Thumbnail */}
+        {/* Dynamic Image */}
         <div className="h-64 bg-gray-200 border-2 border-brand-black mb-4 flex items-center justify-center relative overflow-hidden shrink-0">
-          {image ? (
-            <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          {currentImage ? (
+            <img src={currentImage} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <span className="text-gray-400 font-mono">NO IMG</span>
           )}
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-brand-black/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
+
+        {/* VARIANT BUTTONS (Shown on Grid!) */}
+        {variants && variants.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {variants.map((v, i) => (
+              <button
+                key={i}
+                onClick={(e) => handleVariantClick(e, v)}
+                className={`text-[10px] font-bold px-2 py-1 border-2 border-brand-black uppercase transition-all ${
+                  selectedVariantName === v.name 
+                    ? 'bg-brand-black text-white' 
+                    : 'bg-white text-brand-black hover:bg-brand-yellow'
+                }`}
+              >
+                {v.name}
+              </button>
+            ))}
+          </div>
+        )}
         
-        {/* Simple Footer */}
-        <div className="mt-auto">
-          <h3 className="text-xl font-bold uppercase leading-none mb-2">{title}</h3>
-          <p className="text-brand-red font-mono font-bold text-lg">
-            Starts at {finalPrice}
-          </p>
+        {/* Title & Price & Add Button */}
+        <div className="mt-auto flex justify-between items-end">
+          <div>
+            <h3 className="text-xl font-bold uppercase leading-none mb-1">{title}</h3>
+            <p className="text-brand-red font-mono font-bold text-lg">{finalPrice}</p>
+          </div>
+          <button 
+            className={`w-10 h-10 border-2 border-brand-black flex items-center justify-center text-xl font-bold transition-all ${
+              showAdded ? 'bg-brand-green text-white scale-110' : 'bg-brand-yellow hover:bg-brand-green hover:text-white'
+            }`}
+            onClick={handleAddToCart}
+          >
+            {showAdded ? '✓' : '+'}
+          </button>
         </div>
       </div>
     </Link>
