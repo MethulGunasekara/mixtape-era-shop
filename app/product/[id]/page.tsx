@@ -1,156 +1,172 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
+import { useParams } from 'next/navigation';
+import { Loader2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
-interface Product {
-  id: number;
-  title: string;
+interface Variant {
+  name: string;
   price: string;
-  description: string | null;
   image_url: string;
-  gallery: string[] | null;
 }
 
 export default function ProductPage() {
-  const params = useParams();
-  const productId = params.id as string;
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<string>('');
+  const { id } = useParams();
   const { addToCart } = useCart();
+  
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Interactive State
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+  const [displayImage, setDisplayImage] = useState('');
+  const [displayPrice, setDisplayPrice] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    fetchProduct();
-  }, [productId]);
-
-  async function fetchProduct() {
-    try {
+    const fetchProduct = async () => {
+      if (!id) return;
+      
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('id', productId)
+        .eq('id', id)
         .single();
-
-      if (error) throw error;
-
+        
       if (data) {
         setProduct(data);
-        setSelectedImage(data.image_url);
+        // Initialize with the first variant (lowest price usually)
+        if (data.variants && data.variants.length > 0) {
+          const firstVar = data.variants[0];
+          setSelectedVariant(firstVar);
+          setDisplayImage(firstVar.image_url);
+          setDisplayPrice(firstVar.price);
+        } else {
+          // Fallback if no variants
+          setDisplayImage(data.image_url);
+          setDisplayPrice(data.price);
+        }
       }
-    } catch (error: any) {
-      console.error('Error fetching product:', error.message);
-    } finally {
       setLoading(false);
-    }
-  }
+    };
+    fetchProduct();
+  }, [id]);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-brand-cream text-brand-black font-mono">
-        <Navbar />
-        <div className="flex items-center justify-center py-20">
-          <p className="text-xl font-bold">Loading...</p>
-        </div>
-      </main>
-    );
-  }
+  const handleVariantClick = (variant: Variant) => {
+    setSelectedVariant(variant);
+    setDisplayImage(variant.image_url);
+    setDisplayPrice(variant.price);
+  };
 
-  if (!product) {
-    return (
-      <main className="min-h-screen bg-brand-cream text-brand-black font-mono">
-        <Navbar />
-        <div className="flex items-center justify-center py-20">
-          <p className="text-xl font-bold">Product not found</p>
-        </div>
-      </main>
-    );
-  }
+  const handleAddToCart = () => {
+    if (!product) return;
+    
+    setIsAdding(true);
+    addToCart({
+      id: product.id,
+      title: product.title,
+      price: displayPrice,
+      image_url: displayImage,
+      variant: selectedVariant ? selectedVariant.name : 'Standard'
+    });
+    
+    setTimeout(() => setIsAdding(false), 500);
+  };
 
-  const galleryImages = product.gallery || [];
-  const allImages = [product.image_url, ...galleryImages];
+  if (loading) return (
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center">
+      <Loader2 className="w-10 h-10 animate-spin text-brand-black" />
+    </div>
+  );
+
+  if (!product) return (
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center text-xl font-bold">
+      Product not found.
+    </div>
+  );
 
   return (
     <main className="min-h-screen bg-brand-cream text-brand-black font-mono">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-6 py-16">
+      <div className="max-w-6xl mx-auto py-12 px-6">
+        <Link href="/" className="inline-flex items-center gap-2 font-bold mb-8 hover:text-brand-red transition-colors">
+          <ArrowLeft className="w-5 h-5" /> BACK TO DROPS
+        </Link>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           
-          {/* Left Side - Image Gallery */}
-          <div>
-            {/* Large Main Image */}
-            <div className="bg-white border-4 border-brand-black mb-4 aspect-square overflow-hidden">
-              <img 
-                src={selectedImage} 
-                alt={product.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
+          {/* LEFT: Dynamic Image */}
+          <div className="relative">
+             <div className="aspect-square bg-white border-4 border-brand-black shadow-[12px_12px_0px_0px_rgba(15,15,15,1)] overflow-hidden flex items-center justify-center">
+               <img 
+                 src={displayImage} 
+                 alt={product.title} 
+                 className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" 
+               />
+             </div>
+          </div>
 
-            {/* Thumbnail Row */}
-            {allImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {allImages.map((imageUrl, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(imageUrl)}
-                    className={`flex-shrink-0 w-20 h-20 border-4 ${
-                      selectedImage === imageUrl 
-                        ? 'border-brand-red' 
-                        : 'border-brand-black'
-                    } bg-white overflow-hidden hover:opacity-80 transition-opacity`}
-                  >
-                    <img 
-                      src={imageUrl} 
-                      alt={`Thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+          {/* RIGHT: Details & Controls */}
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black uppercase leading-none mb-4">{product.title}</h1>
+            
+            {/* Dynamic Price */}
+            <p className="text-3xl font-mono font-bold text-brand-red mb-8 border-b-4 border-brand-black inline-block pb-1">
+              {displayPrice} LKR
+            </p>
+
+            {/* --- SELECT TYPE (BUTTONS) --- */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="mb-8">
+                <label className="block font-bold uppercase mb-3 text-sm tracking-wider">Select Pack Size:</label>
+                <div className="flex flex-wrap gap-3">
+                  {product.variants.map((v: Variant, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleVariantClick(v)}
+                      className={`px-6 py-3 border-4 font-bold uppercase transition-all transform hover:-translate-y-1 ${
+                        selectedVariant?.name === v.name
+                          ? 'bg-brand-black text-white border-brand-black shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]'
+                          : 'bg-white text-brand-black border-brand-black hover:bg-brand-yellow shadow-[4px_4px_0px_0px_rgba(15,15,15,1)]'
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Right Side - Product Info */}
-          <div className="flex flex-col justify-center">
-            <div className="bg-white border-4 border-brand-black p-8 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)]">
-              <h1 className="text-5xl font-black uppercase mb-4">{product.title}</h1>
-              <p className="text-3xl font-bold text-brand-red mb-8 font-mono">{product.price}</p>
-              
-              <div className="mb-8">
-                <h2 className="text-xl font-bold uppercase mb-2 border-b-2 border-brand-black pb-2">
-                  Description
-                </h2>
-                <p className="text-gray-700 leading-relaxed">
-                  {product.description || 'No description provided.'}
-                </p>
-              </div>
-
-              <button 
-                onClick={() => {
-                  if (product) {
-                    addToCart({
-                      id: product.id,
-                      title: product.title,
-                      price: product.price,
-                      image_url: product.image_url,
-                    });
-                  }
-                }}
-                className="w-full bg-brand-red border-4 border-brand-black py-4 font-black uppercase text-xl tracking-widest hover:translate-y-1 shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] transition-all"
-              >
-                ADD TO CART
-              </button>
+            {/* Description */}
+            <div className="mb-8">
+               <label className="block font-bold uppercase mb-2 text-sm text-gray-500">Description</label>
+               <p className="whitespace-pre-wrap font-bold text-lg leading-relaxed">{product.description}</p>
             </div>
-          </div>
 
+            {/* Add to Cart Button */}
+            <button 
+              onClick={handleAddToCart}
+              className={`w-full md:w-auto px-12 py-5 border-4 border-brand-black font-black uppercase text-xl tracking-widest shadow-[8px_8px_0px_0px_rgba(15,15,15,1)] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-3 ${
+                isAdding ? 'bg-brand-green text-white' : 'bg-brand-red text-white'
+              }`}
+            >
+              {isAdding ? (
+                <>ADDED TO STASH ✓</>
+              ) : (
+                <>
+                  <ShoppingBag className="w-6 h-6" /> ADD TO STASH
+                </>
+              )}
+            </button>
+            
+          </div>
         </div>
       </div>
     </main>
   );
 }
-
