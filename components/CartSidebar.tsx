@@ -13,7 +13,6 @@ export default function CartSidebar() {
     let message = 'Yo Mixtape Era! 📼 I want to secure these drops:\n\n'
     message += '--------------------------------\n'
     cartItems.forEach((item) => {
-      // Show variant in WhatsApp message if it exists
       const variantText = item.variant && item.variant !== 'Standard' ? `[${item.variant}] ` : ''
       message += `• ${item.quantity} x ${variantText}${item.title} - ${item.price}\n`
     })
@@ -29,10 +28,27 @@ export default function CartSidebar() {
     <div
       className={`
         fixed z-50 bg-brand-cream border-brand-black shadow-2xl transition-transform duration-300 ease-in-out flex flex-col
+        
+        /* --- MOBILE STYLES (Keep as is) --- */
+        /* Bottom Sheet: Sticks to bottom, 60% height */
         bottom-0 left-0 w-full h-[60vh] border-t-4 rounded-t-3xl
+        /* Mobile Animation: Slide Up/Down */
         ${isCartOpen ? 'translate-y-0' : 'translate-y-full'}
-        md:top-0 md:right-0 md:h-full md:w-[400px] md:border-l-4 md:border-t-0 md:rounded-none
-        md:${isCartOpen ? 'translate-x-0' : 'translate-x-full md:translate-y-0'}
+
+        /* --- DESKTOP FIXES --- */
+        /* 1. Reset Mobile Positioning */
+        md:bottom-auto md:left-auto 
+        
+        /* 2. Desktop Positioning: Right Sidebar, Full Height */
+        md:top-0 md:right-0 md:h-full md:w-[400px] 
+        
+        /* 3. Desktop Styling: Border on left, Square corners */
+        md:border-l-4 md:border-t-0 md:rounded-none
+
+        /* 4. Desktop Animation: Slide Left/Right */
+        /* IMPORTANT: We must force Y-translation to 0 on desktop so it doesn't slide down */
+        md:translate-y-0
+        ${isCartOpen ? 'md:translate-x-0' : 'md:translate-x-full'}
       `}
     >
       {/* Header */}
@@ -55,7 +71,6 @@ export default function CartSidebar() {
         ) : (
           <div className="space-y-4">
             {cartItems.map((item, index) => (
-              // Using index as key backup to avoid collision if id/variant are same (shouldn't happen with addToCart logic though)
               <div key={`${item.id}-${item.variant}-${index}`} className="bg-white border-2 md:border-4 border-brand-black p-3 md:p-4 relative group shadow-sm">
                 <div className="flex gap-3 md:gap-4 mb-2">
                   <div className="w-16 h-16 md:w-20 md:h-20 border-2 border-brand-black overflow-hidden flex-shrink-0">
@@ -63,7 +78,6 @@ export default function CartSidebar() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold uppercase text-sm mb-1 truncate">{item.title}</h3>
-                    {/* Show Variant Name */}
                     {item.variant && item.variant !== 'Standard' && (
                        <span className="inline-block bg-gray-100 border border-brand-black px-1 text-[10px] font-bold uppercase mb-1">
                          {item.variant}
@@ -75,7 +89,6 @@ export default function CartSidebar() {
                     </div>
                   </div>
                   <button 
-                    // FIXED: Now passing variant to remove function
                     onClick={() => removeFromCart(item.id, item.variant)}
                     className="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-600 transition-colors"
                   >
