@@ -23,7 +23,6 @@ export default function Home() {
       if (productData) setProducts(productData);
 
       // Fetch Individual Stickers
-      // Note: Ensure you have a 'stickers' table in Supabase
       const { data: stickerData } = await supabase
         .from('stickers')
         .select('*')
@@ -35,7 +34,7 @@ export default function Home() {
   }, []);
 
   // Logic to group stickers by Pack Name
-  const groupedStickers = stickers.reduce((acc, sticker) => {
+  const groupedStickers = stickers.reduce((acc, sticker: any) => {
     const pack = sticker.pack_name || 'Other Singles';
     if (!acc[pack]) acc[pack] = [];
     acc[pack].push(sticker);
@@ -106,7 +105,8 @@ export default function Home() {
                   {packName}
                 </h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                  {groupedStickers[packName].map((sticker) => (
+                  {/* FIXED: Added : any type here to satisfy Vercel Build */}
+                  {groupedStickers[packName].map((sticker: any) => (
                     <button
                       key={sticker.id}
                       onClick={() => addToCart({
@@ -128,7 +128,6 @@ export default function Home() {
                       <div className="absolute top-0 right-0 bg-brand-black text-white text-[10px] font-bold px-1.5 py-0.5">
                         #{sticker.sticker_number}
                       </div>
-                      {/* Hover Overlay */}
                       <div className="absolute inset-0 bg-brand-red/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   ))}
