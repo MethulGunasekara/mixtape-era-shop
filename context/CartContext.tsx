@@ -2,23 +2,27 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
-interface CartItem {
-  id: number
+export interface CartItem {
+  id: string | number
   title: string
   price: string
   image_url: string
   quantity: number
-  variant?: string // <--- NEW: Tracks which type (e.g. "10 Stickers")
+  variant?: string
+  // --- NEW FIELDS FOR SINGLES ---
+  isSingle?: boolean
+  stickerNumber?: number | string
+  packName?: string
 }
 
 interface CartContextType {
   cartItems: CartItem[]
   isCartOpen: boolean
   addToCart: (product: Omit<CartItem, 'quantity'>) => void
-  removeFromCart: (id: number, variant?: string) => void // Updated signature
+  removeFromCart: (id: string | number, variant?: string, stickerNumber?: number | string) => void
   clearCart: () => void 
   toggleCart: () => void
-  updateQuantity: (id: number, variant: string | undefined, quantity: number) => void // Updated signature
+  updateQuantity: (id: string | number, variant?: string, stickerNumber?: number | string, quantity?: number) => void
   getTotalItems: () => number
   getSubtotal: () => number
 }
@@ -30,7 +34,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // Load from LocalStorage
   useEffect(() => {
     const savedCart = localStorage.getItem('mixtape-cart')
     if (savedCart) {
@@ -43,24 +46,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsInitialized(true)
   }, [])
 
-  // Save to LocalStorage
   useEffect(() => {
     if (isInitialized) {
       localStorage.setItem('mixtape-cart', JSON.stringify(cartItems))
     }
   }, [cartItems, isInitialized])
 
-  // ADD TO CART (Now checks Variant too)
   const addToCart = (product: Omit<CartItem, 'quantity'>) => {
     setCartItems((prevItems) => {
-      // Find item with matching ID AND Matching Variant
+      // Find item with matching ID, Variant, AND Sticker Number
       const existingItem = prevItems.find((item) => 
-        item.id === product.id && item.variant === product.variant
+        item.id === product.id && 
+        item.variant === product.variant && 
+        item.stickerNumber === product.stickerNumber
       )
 
       if (existingItem) {
         return prevItems.map((item) =>
-          (item.id === product.id && item.variant === product.variant)
+          (item.id === product.id && 
+           item.variant === product.variant && 
+           item.stickerNumber === product.stickerNumber)
             ? { ...item, quantity: item.quantity + 1 } 
             : item
         )
@@ -71,10 +76,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartOpen(true)
   }
 
-  // REMOVE (Checks Variant)
-  const removeFromCart = (id: number, variant?: string) => {
+  const removeFromCart = (id: string | number, variant?: string, stickerNumber?: number | string) => {
     setCartItems((prevItems) => 
-      prevItems.filter((item) => !(item.id === id && item.variant === variant))
+      prevItems.filter((item) => 
+        !(item.id === id && item.variant === variant && item.stickerNumber === stickerNumber)
+      )
     )
   }
 
@@ -85,15 +91,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // UPDATE QTY (Checks Variant)
-  const updateQuantity = (id: number, variant: string | undefined, quantity: number) => {
+  const updateQuantity = (id: string | number, variant?: string, stickerNumber?: number | string, quantity: number = 1) => {
     if (quantity <= 0) {
-      removeFromCart(id, variant)
+      removeFromCart(id, variant, stickerNumber)
       return
     }
     setCartItems((prevItems) =>
       prevItems.map((item) => 
-        (item.id === id && item.variant === variant) ? { ...item, quantity } : item
+        (item.id === id && item.variant === variant && item.stickerNumber === stickerNumber) 
+        ? { ...item, quantity } : item
       )
     )
   }
@@ -104,6 +110,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const getSubtotal = () => {
     return cartItems.reduce((total, item) => {
+      // Handles strings like "Rs. 500" or "500.00"
       const priceValue = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0
       return total + priceValue * item.quantity
     }, 0)

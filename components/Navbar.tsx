@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
 
@@ -9,73 +9,82 @@ export default function Navbar() {
   const { toggleCart, getTotalItems } = useCart()
   const cartCount = getTotalItems()
 
+  const navLinks = [
+    { name: 'PACKS', href: '#shop' },
+    { name: 'SINGLES', href: '#singles' },
+    { name: 'ABOUT', href: '#about' },
+  ]
+
   return (
-    <nav className="sticky top-0 z-50 bg-brand-cream border-b-2 border-brand-black">
+    <nav className="sticky top-0 z-50 bg-brand-cream border-b-4 border-brand-black">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           
           {/* Logo Section */}
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center gap-3 group">
-              {/* Logo Image */}
               <img 
                 src="/mixtapeEraLogo.png" 
                 alt="Mixtape Era" 
-                className="h-10 w-auto object-contain" 
+                className="h-12 w-auto object-contain transition-transform group-hover:rotate-12" 
               />
-              
-              {/* FIXED: Removed 'hidden' so this text shows on Mobile too */}
-              <span className="font-display text-xl md:text-2xl font-bold tracking-tight block text-brand-black">
+              <span className="font-display text-xl md:text-2xl font-black tracking-tighter block text-brand-black uppercase">
                 MIXTAPE ERA
               </span>
             </a>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <a href="#shop" className="font-mono text-sm hover:underline font-bold">
-              SHOP
-            </a>
-            <a href="#about" className="font-mono text-sm hover:underline font-bold">
-              ABOUT
-            </a>
+          <div className="hidden md:flex items-center space-x-10">
+            {navLinks.map((link) => (
+              <a 
+                key={link.name}
+                href={link.href} 
+                className="font-mono text-sm font-black uppercase hover:text-brand-red transition-colors tracking-widest"
+              >
+                {link.name}
+              </a>
+            ))}
             
             <button 
               onClick={toggleCart}
-              className="px-4 py-2 border-2 border-brand-black rounded-md shadow-[2px_2px_0px_0px_rgba(15,15,15,1)] hover:shadow-none hover:translate-y-[2px] transition-all font-mono text-sm bg-brand-red text-white font-bold"
+              className="px-6 py-2 border-4 border-brand-black shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all font-mono text-sm bg-brand-red text-white font-black uppercase tracking-widest"
             >
-              CART ({cartCount})
+              CART [{cartCount}]
             </button>
           </div>
 
           {/* Mobile Menu Button + Cart Icon */}
-          <div className="md:hidden flex items-center gap-4">
-            {/* Mobile Cart Button */}
+          <div className="md:hidden flex items-center gap-3">
             <button 
               onClick={toggleCart}
-              className="text-sm font-bold font-mono bg-brand-red text-white px-3 py-1 border-2 border-brand-black rounded"
+              className="text-xs font-black font-mono bg-brand-red text-white px-3 py-2 border-2 border-brand-black shadow-[2px_2px_0px_0px_rgba(15,15,15,1)] active:shadow-none active:translate-y-[2px] transition-all"
             >
-              CART ({cartCount})
+              CART [{cartCount}]
             </button>
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 border-2 border-brand-black rounded-md hover:shadow-button transition-shadow bg-white"
+              className="p-2 border-2 border-brand-black bg-white shadow-[2px_2px_0px_0px_rgba(15,15,15,1)]"
             >
-              <Menu className="w-5 h-5" />
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Menu Dropdown */}
         {isMenuOpen && (
-          <div className="md:hidden border-t-2 border-brand-black py-4 space-y-4 bg-brand-cream">
-            <a href="#shop" className="block font-mono text-sm hover:underline px-2 font-bold" onClick={() => setIsMenuOpen(false)}>
-              SHOP
-            </a>
-            <a href="#about" className="block font-mono text-sm hover:underline px-2 font-bold" onClick={() => setIsMenuOpen(false)}>
-              ABOUT
-            </a>
+          <div className="md:hidden border-t-4 border-brand-black py-6 space-y-6 bg-brand-cream animate-in slide-in-from-top duration-200">
+            {navLinks.map((link) => (
+              <a 
+                key={link.name}
+                href={link.href} 
+                className="block font-mono text-lg font-black uppercase px-4 hover:bg-brand-yellow py-2 transition-colors" 
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {link.name}
+              </a>
+            ))}
           </div>
         )}
       </div>

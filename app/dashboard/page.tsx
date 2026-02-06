@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, X, Image as ImageIcon, UploadCloud, Layers, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, X, Image as ImageIcon, UploadCloud, Layers, Loader2, Plus, Hash, Tag } from 'lucide-react';
 
 interface Variant {
   name: string;
@@ -22,31 +22,18 @@ interface Product {
   variants: Variant[];
 }
 
+interface Sticker {
+  id: number;
+  pack_name: string;
+  sticker_number: number;
+  image_url: string;
+  price_tier: 'small' | 'general';
+}
+
 export default function Dashboard() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'drops' | 'singles'>('drops');
   
-  // Product State
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState(''); // Main Thumbnail (Mandatory)
-  const [badgeText, setBadgeText] = useState('');
-  const [badgeType, setBadgeType] = useState('none');
-  
-  // --- VARIANT STATE ---
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [vName, setVName] = useState('');
-  const [vPrice, setVPrice] = useState('');
-  const [vImage, setVImage] = useState('');
-  
-  // Uploading States
-  const [uploadingMain, setUploadingMain] = useState(false);
-  const [uploadingVariant, setUploadingVariant] = useState(false);
-
-  // App State
-  const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
-
   // Security Check
   useEffect(() => {
     const checkUser = async () => {
@@ -56,163 +43,104 @@ export default function Dashboard() {
     checkUser();
   }, [router]);
 
+  // --- DROPS STATE ---
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState('');
+  const [badgeText, setBadgeText] = useState('');
+  const [badgeType, setBadgeType] = useState('none');
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [vName, setVName] = useState('');
+  const [vPrice, setVPrice] = useState('');
+  const [vImage, setVImage] = useState('');
+  const [uploadingMain, setUploadingMain] = useState(false);
+  const [uploadingVariant, setUploadingVariant] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  // --- SINGLES STATE ---
+  const [sPackName, setSPackName] = useState('');
+  const [sNumber, setSNumber] = useState('');
+  const [sImage, setSImage] = useState('');
+  const [sPriceTier, setSPriceTier] = useState<'small' | 'general'>('general');
+  const [uploadingSticker, setUploadingSticker] = useState(false);
+  const [stickers, setStickers] = useState<Sticker[]>([]);
+
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     fetchProducts();
+    fetchStickers();
   }, []);
 
   const fetchProducts = async () => {
-    const { data } = await supabase
-      .from('products')
-      .select('*')
-      .order('id', { ascending: false });
+    const { data } = await supabase.from('products').select('*').order('id', { ascending: false });
     if (data) setProducts(data);
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setDescription('');
-    setImage('');
-    setBadgeText('');
-    setBadgeType('none');
-    setVariants([]);
-    setVName('');
-    setVPrice('');
-    setVImage('');
-    setEditingId(null);
+  const fetchStickers = async () => {
+    const { data } = await supabase.from('stickers').select('*').order('pack_name', { ascending: true }).order('sticker_number', { ascending: true });
+    if (data) setStickers(data);
   };
 
-  const handleEdit = (product: Product) => {
-    setEditingId(product.id);
-    setTitle(product.title);
-    setDescription(product.description || '');
-    setImage(product.image_url || ''); // Load main image
-    setBadgeText(product.badge_text || '');
-    setBadgeType(product.badge_type || 'none');
-    
-    if (product.variants && Array.isArray(product.variants)) {
-      setVariants(product.variants);
-    } else {
-      // Legacy support
-      setVariants([{
-        name: 'Standard',
-        price: product.price,
-        image_url: product.image_url
-      }]);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // --- IMAGE HELPERS ---
+  const uploadToStorage = async (file: File, prefix: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage.from('stickers').upload(fileName, file);
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from('stickers').getPublicUrl(fileName);
+    return data.publicUrl;
   };
 
-  // --- 1. MAIN THUMBNAIL UPLOADER ---
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    setUploadingMain(true);
     try {
-      setUploadingMain(true);
-      if (!e.target.files || e.target.files.length === 0) return;
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `main-${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage.from('stickers').upload(fileName, file);
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('stickers').getPublicUrl(fileName);
-      setImage(data.publicUrl);
-    } catch (error: any) {
-      alert('Upload failed: ' + error.message);
-    } finally {
-      setUploadingMain(false);
-    }
+      const url = await uploadToStorage(e.target.files[0], 'main');
+      setImage(url);
+    } catch (err: any) { alert(err.message); }
+    finally { setUploadingMain(false); }
   };
 
-  // --- 2. VARIANT IMAGE UPLOADER ---
-  const handleVariantImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStickerImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    setUploadingSticker(true);
     try {
-      setUploadingVariant(true);
-      if (!e.target.files || e.target.files.length === 0) return;
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `var-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage.from('stickers').upload(fileName, file);
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('stickers').getPublicUrl(fileName);
-      setVImage(data.publicUrl);
-    } catch (error: any) {
-      alert('Upload failed: ' + error.message);
-    } finally {
-      setUploadingVariant(false);
-    }
+      const url = await uploadToStorage(e.target.files[0], 'sticker');
+      setSImage(url);
+    } catch (err: any) { alert(err.message); }
+    finally { setUploadingSticker(false); }
   };
 
-  const addVariant = () => {
-    if (!vName || !vPrice || !vImage) {
-      alert("Please fill in Name, Price and Image for the variant.");
-      return;
-    }
-    setVariants([...variants, { name: vName, price: vPrice, image_url: vImage }]);
-    setVName('');
-    setVPrice('');
-    setVImage('');
-  };
-
-  const removeVariant = (index: number) => {
-    const newVars = [...variants];
-    newVars.splice(index, 1);
-    setVariants(newVars);
-  };
-
-  const handleUpload = async (e: React.FormEvent) => {
+  // --- ACTIONS ---
+  const handleDropSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // VALIDATION
-    if (!image) {
-      alert("Please upload a Main Thumbnail.");
-      return;
-    }
-    if (variants.length === 0) {
-      alert("Please add at least one variant type (e.g. 10 Stickers).");
-      return;
-    }
-
+    if (!image || variants.length === 0) return alert("Missing image or variants");
     setLoading(true);
-
-    // Calculate display price (Lowest variant price)
-    const sortedVariants = [...variants].sort((a, b) => 
-      parseFloat(a.price) - parseFloat(b.price)
-    );
-    const lowestPrice = sortedVariants[0].price; 
-
-    const productData = {
-      title,
-      description,
-      badge_text: badgeText || null,
-      badge_type: badgeType,
-      variants: variants,
-      price: lowestPrice,   // Used for sorting/display
-      image_url: image      // The Main Thumbnail
-    };
-
-    let error;
-    if (editingId) {
-      const { error: uErr } = await supabase.from('products').update(productData).eq('id', editingId);
-      error = uErr;
-    } else {
-      const { error: iErr } = await supabase.from('products').insert([productData]);
-      error = iErr;
-    }
-
-    if (error) {
-      alert('Error: ' + error.message);
-    } else {
-      alert(editingId ? 'Updated!' : 'Published!');
-      resetForm();
-      fetchProducts();
-    }
+    const lowestPrice = [...variants].sort((a,b) => parseFloat(a.price) - parseFloat(b.price))[0].price;
+    const data = { title, description, badge_text: badgeText || null, badge_type: badgeType, variants, price: lowestPrice, image_url: image };
+    const { error } = editingId ? await supabase.from('products').update(data).eq('id', editingId) : await supabase.from('products').insert([data]);
+    if (!error) { fetchProducts(); resetDropForm(); }
     setLoading(false);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this drop?')) return;
-    await supabase.from('products').delete().eq('id', id);
-    fetchProducts();
+  const handleStickerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sImage || !sPackName || !sNumber) return alert("Fill all fields");
+    setLoading(true);
+    const { error } = await supabase.from('stickers').insert([{
+      pack_name: sPackName,
+      sticker_number: parseInt(sNumber),
+      image_url: sImage,
+      price_tier: sPriceTier
+    }]);
+    if (!error) { fetchStickers(); setSImage(''); setSNumber(''); }
+    setLoading(false);
+  };
+
+  const resetDropForm = () => {
+    setEditingId(null); setTitle(''); setDescription(''); setImage(''); setVariants([]);
   };
 
   return (
@@ -220,159 +148,158 @@ export default function Dashboard() {
       <Navbar />
       <div className="max-w-4xl mx-auto py-20 px-6">
         
-        <div className="bg-white border-4 border-brand-black p-8 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)] mb-12">
-          <div className="flex justify-between items-center mb-8 border-b-4 border-brand-black pb-4">
-            <h1 className="text-3xl font-black uppercase">{editingId ? 'Edit Drop' : 'Upload Drop'}</h1>
-            {editingId && (
-              <button onClick={resetForm} className="text-sm font-bold text-red-500 hover:underline flex items-center gap-1">
-                <X className="w-4 h-4" /> Cancel
-              </button>
-            )}
-          </div>
+        {/* TAB SWITCHER */}
+        <div className="flex gap-4 mb-8">
+          <button 
+            onClick={() => setActiveTab('drops')}
+            className={`flex-1 py-4 font-black uppercase border-4 border-brand-black transition-all ${activeTab === 'drops' ? 'bg-brand-red text-white translate-x-1 translate-y-1 shadow-none' : 'bg-white shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] hover:bg-gray-50'}`}
+          >
+            Manage Drops
+          </button>
+          <button 
+            onClick={() => setActiveTab('singles')}
+            className={`flex-1 py-4 font-black uppercase border-4 border-brand-black transition-all ${activeTab === 'singles' ? 'bg-brand-yellow translate-x-1 translate-y-1 shadow-none' : 'bg-white shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] hover:bg-gray-50'}`}
+          >
+            Manage Singles
+          </button>
+        </div>
 
-          <form onSubmit={handleUpload} className="space-y-8">
-            
-            {/* 1. Title */}
-            <div>
-              <label className="block font-bold mb-2 uppercase">Product Title</label>
-              <input 
-                type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold focus:bg-brand-yellow/20 outline-none"
-                placeholder="Ex: Holo Skull" required
-              />
-            </div>
-
-            {/* 2. MAIN THUMBNAIL (Mandatory) */}
-            <div className="bg-gray-50 p-6 border-2 border-brand-black border-dashed">
-              <h3 className="font-bold uppercase mb-4 text-brand-red flex items-center gap-2">
-                <ImageIcon className="w-5 h-5" /> Main Thumbnail (Required)
-              </h3>
-              <div className="flex gap-4 items-center">
-                <div className="relative flex-1 group">
-                  <input 
-                    type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMain}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  />
-                  <div className={`w-full bg-white border-2 border-brand-black p-3 font-bold flex items-center justify-center gap-2 text-sm transition-all ${
-                    uploadingMain ? 'bg-gray-200 text-gray-500' : 'group-hover:bg-brand-yellow group-hover:text-brand-black'
-                  }`}>
-                    {uploadingMain ? <Loader2 className="w-5 h-5 animate-spin"/> : <UploadCloud className="w-5 h-5" />}
-                    {uploadingMain ? 'UPLOADING...' : 'UPLOAD MAIN COVER IMAGE'}
-                  </div>
-                </div>
-                <div className="w-20 h-20 border-2 border-brand-black bg-white flex items-center justify-center overflow-hidden shrink-0">
-                  {image ? <img src={image} className="w-full h-full object-cover" /> : <span className="text-xs text-gray-300">PRE</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Description */}
-            <div>
-              <label className="block font-bold mb-2 uppercase">Description</label>
-              <textarea 
-                value={description} onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold h-24 focus:bg-brand-yellow/20 outline-none resize-none"
-                placeholder="Details about the sticker..."
-              />
-            </div>
-
-            {/* 4. VARIANTS MANAGER */}
-            <div className="bg-blue-50 p-6 border-2 border-brand-black">
-              <h3 className="font-bold uppercase mb-4 text-brand-black flex items-center gap-2">
-                <Layers className="w-5 h-5" /> Product Types / Sizes
-              </h3>
-              
-              {/* Variant Inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <input 
-                  placeholder="Name (e.g. 10 Pack)" 
-                  value={vName} onChange={e => setVName(e.target.value)}
-                  className="bg-white border-2 border-brand-black p-2 text-sm font-bold"
-                />
-                <input 
-                  placeholder="Price (e.g. 1500)" 
-                  type="number"
-                  value={vPrice} onChange={e => setVPrice(e.target.value)}
-                  className="bg-white border-2 border-brand-black p-2 text-sm font-bold"
-                />
-                <div className="relative group h-[42px]">
-                   <input type="file" onChange={handleVariantImageUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
-                   <div className={`w-full h-full bg-white border-2 border-brand-black p-2 flex items-center justify-center text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis ${vImage ? 'text-green-600 bg-green-50' : 'text-gray-400'}`}>
-                     {uploadingVariant ? 'Uploading...' : (vImage ? 'Image Set ✓' : 'Select Image')}
-                   </div>
-                </div>
-              </div>
-              <button 
-                type="button" 
-                onClick={addVariant}
-                disabled={uploadingVariant}
-                className="w-full bg-brand-black text-white font-bold uppercase py-2 hover:bg-gray-800 transition-colors mb-6 text-sm"
-              >
-                + Add This Type
-              </button>
-
-              {/* Variant List */}
-              <div className="space-y-2">
-                {variants.map((v, idx) => (
-                  <div key={idx} className="flex items-center gap-4 bg-white p-3 border-2 border-brand-black">
-                    <img src={v.image_url} className="w-10 h-10 object-cover border border-brand-black"/>
-                    <div className="flex-1">
-                      <p className="font-bold text-sm uppercase">{v.name}</p>
-                      <p className="text-xs font-mono text-brand-red">{v.price}</p>
+        {activeTab === 'drops' ? (
+          /* --- DROPS FORM --- */
+          <div className="space-y-12">
+            <div className="bg-white border-4 border-brand-black p-8 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)]">
+              <h1 className="text-3xl font-black uppercase mb-8 border-b-4 border-brand-black pb-4">
+                {editingId ? 'Edit Drop' : 'Upload New Drop'}
+              </h1>
+              <form onSubmit={handleDropSubmit} className="space-y-6">
+                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="PRODUCT TITLE" className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold" required />
+                
+                <div className="flex gap-4 items-center bg-gray-50 p-4 border-2 border-brand-black border-dashed">
+                  <div className="relative flex-1">
+                    <input type="file" onChange={handleMainImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <div className="w-full bg-white border-2 border-brand-black p-3 font-black text-center uppercase text-sm">
+                      {uploadingMain ? 'UPLOADING...' : 'UPLOAD MAIN THUMBNAIL'}
                     </div>
-                    <button type="button" onClick={() => removeVariant(idx)} className="text-red-500 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
-                ))}
-                {variants.length === 0 && <p className="text-sm text-gray-500 italic text-center">No types added yet. Add at least one.</p>}
-              </div>
-            </div>
-
-            {/* 5. Promotions */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block font-bold mb-2 text-sm uppercase">Badge</label>
-                <select value={badgeType} onChange={e => setBadgeType(e.target.value)} className="w-full border-2 border-brand-black p-2 font-bold">
-                  <option value="none">None</option>
-                  <option value="discount">Discount</option>
-                  <option value="offer">Offer</option>
-                </select>
-              </div>
-              {badgeType !== 'none' && (
-                <div>
-                   <label className="block font-bold mb-2 text-sm uppercase">Text/Value</label>
-                   <input value={badgeText} onChange={e => setBadgeText(e.target.value)} className="w-full border-2 border-brand-black p-2 font-bold" />
+                  {image && <img src={image} className="w-16 h-16 border-2 border-brand-black object-cover" />}
                 </div>
-              )}
+
+                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="DESCRIPTION" className="w-full bg-gray-100 border-2 border-brand-black p-3 h-24 font-bold" />
+
+                {/* Variants Logic (Same as your old code) */}
+                <div className="bg-blue-50 p-4 border-2 border-brand-black">
+                    <p className="font-black uppercase mb-4 flex items-center gap-2"><Layers className="w-5 h-5"/> Pack Variants</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+                        <input value={vName} onChange={e => setVName(e.target.value)} placeholder="Name (10 Pack)" className="border-2 border-brand-black p-2 text-xs font-bold" />
+                        <input value={vPrice} onChange={e => setVPrice(e.target.value)} placeholder="Price (500)" className="border-2 border-brand-black p-2 text-xs font-bold" />
+                        <input type="file" onChange={async (e) => {
+                            if(e.target.files?.[0]) {
+                                setUploadingVariant(true);
+                                const url = await uploadToStorage(e.target.files[0], 'var');
+                                setVImage(url);
+                                setUploadingVariant(false);
+                            }
+                        }} className="text-[10px]" />
+                    </div>
+                    <button type="button" onClick={() => {
+                        if(vName && vPrice && vImage) setVariants([...variants, {name: vName, price: vPrice, image_url: vImage}]);
+                        setVName(''); setVPrice(''); setVImage('');
+                    }} className="w-full bg-brand-black text-white text-xs font-bold py-2 uppercase">Add Variant</button>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {variants.map((v, i) => (
+                            <div key={i} className="bg-white border-2 border-brand-black p-2 flex items-center gap-2">
+                                <span className="text-[10px] font-black">{v.name}</span>
+                                <button onClick={() => setVariants(variants.filter((_, idx) => idx !== i))}><X className="w-3 h-3 text-red-500"/></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <button type="submit" className="w-full bg-brand-red text-white py-4 font-black uppercase shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] border-4 border-brand-black">
+                  {loading ? 'SAVING...' : (editingId ? 'UPDATE DROP' : 'PUBLISH DROP')}
+                </button>
+              </form>
+            </div>
+            
+            {/* Inventory List */}
+            <div className="space-y-4">
+                <h2 className="text-2xl font-black uppercase">Current Drops</h2>
+                {products.map(p => (
+                    <div key={p.id} className="bg-white border-4 border-brand-black p-4 flex items-center gap-4">
+                        <img src={p.image_url} className="w-12 h-12 object-cover border-2 border-brand-black" />
+                        <div className="flex-1 font-bold uppercase text-sm">{p.title}</div>
+                        <div className="flex gap-4">
+                            <button onClick={() => {setEditingId(p.id); setTitle(p.title); setVariants(p.variants); setImage(p.image_url); window.scrollTo(0,0);}}><Pencil className="w-5 h-5 text-blue-600"/></button>
+                            <button onClick={async () => { if(confirm('Delete?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(); }}}><Trash2 className="w-5 h-5 text-red-600"/></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+          </div>
+        ) : (
+          /* --- SINGLES FORM --- */
+          <div className="space-y-12">
+            <div className="bg-white border-4 border-brand-black p-8 shadow-[8px_8px_0px_0px_rgba(15,15,15,1)]">
+              <h1 className="text-3xl font-black uppercase mb-8 border-b-4 border-brand-black pb-4">Upload Single Sticker</h1>
+              <form onSubmit={handleStickerSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-black uppercase mb-1">Pack Name</label>
+                        <input value={sPackName} onChange={e => setSPackName(e.target.value)} placeholder="MIXTAPE: VOL. 1" className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold" required />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-black uppercase mb-1">Sticker #</label>
+                        <input type="number" value={sNumber} onChange={e => setSNumber(e.target.value)} placeholder="1" className="w-full bg-gray-100 border-2 border-brand-black p-3 font-bold" required />
+                    </div>
+                </div>
+
+                <div className="flex gap-4 items-center bg-gray-50 p-4 border-2 border-brand-black border-dashed">
+                  <div className="relative flex-1">
+                    <input type="file" onChange={handleStickerImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <div className="w-full bg-white border-2 border-brand-black p-3 font-black text-center uppercase text-sm">
+                      {uploadingSticker ? 'UPLOADING...' : 'UPLOAD STICKER IMAGE'}
+                    </div>
+                  </div>
+                  {sImage && <img src={sImage} className="w-16 h-16 border-2 border-brand-black object-contain bg-white" />}
+                </div>
+
+                <div>
+                    <label className="block text-xs font-black uppercase mb-1">Price Tier</label>
+                    <select 
+                        value={sPriceTier} 
+                        onChange={e => setSPriceTier(e.target.value as 'small' | 'general')}
+                        className="w-full border-2 border-brand-black p-3 font-black uppercase bg-white"
+                    >
+                        <option value="general">General (Rs. 50)</option>
+                        <option value="small">Small (Rs. 35)</option>
+                    </select>
+                </div>
+
+                <button type="submit" className="w-full bg-brand-yellow text-brand-black py-4 font-black uppercase shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] border-4 border-brand-black">
+                  {loading ? 'SAVING...' : 'PUBLISH STICKER'}
+                </button>
+              </form>
             </div>
 
-            <button 
-              type="submit" disabled={loading || uploadingMain}
-              className={`w-full border-2 border-brand-black py-4 font-black uppercase tracking-widest hover:translate-y-1 shadow-[4px_4px_0px_0px_rgba(15,15,15,1)] transition-all ${editingId ? 'bg-brand-yellow' : 'bg-brand-red'}`}
-            >
-              {loading ? 'Saving...' : (editingId ? 'UPDATE DROP' : 'PUBLISH DROP')}
-            </button>
-          </form>
-        </div>
-
-        {/* Inventory List */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-black uppercase border-b-4 border-brand-black pb-2 mb-6">Inventory</h2>
-          {products.map((p) => (
-            <div key={p.id} className="bg-white border-2 border-brand-black p-4 flex items-center gap-4">
-              <img src={p.image_url} className="w-12 h-12 object-cover border-2 border-brand-black" />
-              <div className="flex-1">
-                <h3 className="font-bold uppercase text-sm">{p.title}</h3>
-                <p className="text-xs text-gray-500 font-bold">{p.variants ? p.variants.length : 1} Types • Start: {p.price}</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleEdit(p)}><Pencil className="w-4 h-4 text-blue-600" /></button>
-                <button onClick={() => handleDelete(p.id)}><Trash2 className="w-4 h-4 text-red-600" /></button>
-              </div>
+            <div className="space-y-4">
+                <h2 className="text-2xl font-black uppercase">Singles Library</h2>
+                <div className="grid grid-cols-1 gap-2">
+                    {stickers.map(s => (
+                        <div key={s.id} className="bg-white border-2 border-brand-black p-3 flex items-center gap-4">
+                            <img src={s.image_url} className="w-10 h-10 object-contain border border-brand-black bg-gray-50" />
+                            <div className="flex-1 font-bold uppercase text-[10px] md:text-xs">
+                                {s.pack_name} <span className="text-brand-red ml-2">#{s.sticker_number}</span>
+                                <span className={`ml-4 px-2 py-0.5 border border-brand-black ${s.price_tier === 'small' ? 'bg-blue-100' : 'bg-green-100'}`}>
+                                    {s.price_tier === 'small' ? 'RS. 35' : 'RS. 50'}
+                                </span>
+                            </div>
+                            <button onClick={async () => { if(confirm('Delete Sticker?')) { await supabase.from('stickers').delete().eq('id', s.id); fetchStickers(); }}}><Trash2 className="w-4 h-4 text-red-600"/></button>
+                        </div>
+                    ))}
+                </div>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </main>
   );
