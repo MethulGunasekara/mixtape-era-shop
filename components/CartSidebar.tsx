@@ -13,17 +13,14 @@ export default function CartSidebar() {
     let message = 'Yo Mixtape Era! 📼 I want to secure these drops:\n\n'
     message += '--------------------------------\n'
 
-    // 1. Separate Bundles and Singles
     const bundles = cartItems.filter(item => !item.isSingle)
     const singles = cartItems.filter(item => item.isSingle)
 
-    // 2. Add Bundles to message (Traditional way)
     bundles.forEach((item) => {
       const variantText = item.variant && item.variant !== 'Standard' ? `[${item.variant}] ` : ''
-      message += `• ${item.quantity} x ${variantText}${item.title} - ${item.price}\n`
+      message += `• ${item.quantity} x ${variantText}${item.title} - Rs. ${parseFloat(item.price.toString().replace(/[^\d.]/g, '')).toFixed(2)}\n`
     })
 
-    // 3. Group Singles by Pack Name
     const groupedSingles: Record<string, { numbers: string[], totalPrice: number }> = {}
 
     singles.forEach(item => {
@@ -32,23 +29,20 @@ export default function CartSidebar() {
         groupedSingles[pName] = { numbers: [], totalPrice: 0 }
       }
       
-      // Format as "5" or "5x2"
       const numDisplay = item.quantity > 1 ? `${item.stickerNumber}x${item.quantity}` : `${item.stickerNumber}`
       groupedSingles[pName].numbers.push(numDisplay)
       
-      const priceValue = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0
+      const priceValue = parseFloat(item.price.toString().replace(/[^\d.]/g, '')) || 0
       groupedSingles[pName].totalPrice += (priceValue * item.quantity)
     })
 
-    // 4. Add Grouped Singles to message
     Object.entries(groupedSingles).forEach(([packName, data]) => {
-      // Sort numbers numerically if possible
       const sortedNums = data.numbers.sort((a, b) => parseInt(a) - parseInt(b))
-      message += `• ${packName} [${sortedNums.join(', ')}] - ${data.totalPrice.toFixed(2)}\n`
+      message += `• ${packName} [${sortedNums.join(', ')}] - Rs. ${data.totalPrice.toFixed(2)}\n`
     })
 
     message += '--------------------------------\n'
-    message += `TOTAL: ${subtotal.toFixed(2)}\n\n`
+    message += `TOTAL: Rs. ${subtotal.toFixed(2)}\n\n`
     message += 'Let me know payment details!'
     
     const encodedMessage = encodeURIComponent(message)
@@ -67,7 +61,6 @@ export default function CartSidebar() {
         ${isCartOpen ? 'md:translate-x-0' : 'md:translate-x-full'}
       `}
     >
-      {/* Header */}
       <div className="border-b-4 border-brand-black bg-white p-4 flex items-center justify-between md:rounded-none rounded-t-3xl">
         <h2 className="text-2xl font-black uppercase">YOUR CART</h2>
         <button
@@ -78,7 +71,6 @@ export default function CartSidebar() {
         </button>
       </div>
 
-      {/* Items List */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-brand-cream">
         {cartItems.length === 0 ? (
           <div className="text-center py-12">
@@ -101,7 +93,10 @@ export default function CartSidebar() {
                          {item.variant}
                        </span>
                     )}
-                    <p className="text-brand-red font-mono font-bold text-sm">{item.price}</p>
+                    {/* FIXED: Added Rs. prefix back in the display logic */}
+                    <p className="text-brand-red font-mono font-bold text-sm">
+                        Rs. {parseFloat(item.price.toString().replace(/[^\d.]/g, '')).toFixed(2)}
+                    </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs font-bold text-gray-600">Qty: {item.quantity}</span>
                     </div>
@@ -119,7 +114,6 @@ export default function CartSidebar() {
         )}
       </div>
 
-      {/* Footer / Checkout */}
       {cartItems.length > 0 && (
         <div className="border-t-4 border-brand-black bg-white p-4 md:p-6 pb-8">
           <div className="flex justify-between items-center mb-4">

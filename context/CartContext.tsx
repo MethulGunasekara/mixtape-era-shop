@@ -9,7 +9,6 @@ export interface CartItem {
   image_url: string
   quantity: number
   variant?: string
-  // --- NEW FIELDS FOR SINGLES ---
   isSingle?: boolean
   stickerNumber?: number | string
   packName?: string
@@ -54,7 +53,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = (product: Omit<CartItem, 'quantity'>) => {
     setCartItems((prevItems) => {
-      // Find item with matching ID, Variant, AND Sticker Number
       const existingItem = prevItems.find((item) => 
         item.id === product.id && 
         item.variant === product.variant && 
@@ -110,10 +108,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const getSubtotal = () => {
     return cartItems.reduce((total, item) => {
-      // Handles strings like "Rs. 500" or "500.00"
-      const priceValue = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0
-      return total + priceValue * item.quantity
-    }, 0)
+      // FIXED: Safer regex to ensure math doesn't result in decimals like 0.50
+      const cleanPrice = item.price.toString().replace(/[^\d.]/g, '');
+      const priceValue = parseFloat(cleanPrice) || 0;
+      return total + (priceValue * item.quantity);
+    }, 0);
   }
 
   return (

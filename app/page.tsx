@@ -14,7 +14,6 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch Packs
       const { data: productData } = await supabase
         .from('products')
         .select('*')
@@ -22,7 +21,6 @@ export default function Home() {
       
       if (productData) setProducts(productData);
 
-      // Fetch Individual Stickers
       const { data: stickerData } = await supabase
         .from('stickers')
         .select('*')
@@ -33,7 +31,6 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Logic to group stickers by Pack Name
   const groupedStickers = stickers.reduce((acc, sticker: any) => {
     const pack = sticker.pack_name || 'Other Singles';
     if (!acc[pack]) acc[pack] = [];
@@ -41,7 +38,6 @@ export default function Home() {
     return acc;
   }, {} as Record<string, any[]>);
 
-  // Filter groups based on search
   const filteredPackNames = Object.keys(groupedStickers).filter(name => 
     name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -50,7 +46,6 @@ export default function Home() {
     <main className="min-h-screen bg-brand-cream text-brand-black font-mono">
       <Navbar /> 
       
-      {/* --- HERO SCENE --- */}
       <section className="relative w-full h-[600px] bg-brand-cream border-b-4 border-brand-black overflow-hidden flex items-center justify-center">
         <div className="relative z-20 scale-90 md:scale-100">
           <img src="/cassette.png" alt="Tape" className="absolute -top-24 -left-20 w-44 md:-top-32 md:-left-28 md:w-56 -rotate-12 drop-shadow-xl z-30 animate-float-slow" />
@@ -67,7 +62,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- FEATURED PACKS SECTION --- */}
       <section id="shop" className="max-w-7xl mx-auto px-6 py-16 scroll-mt-20">
         <h2 className="text-4xl font-black mb-12 uppercase border-l-8 border-brand-red pl-4">Featured Drops</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -77,12 +71,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- SINGLES SECTION --- */}
       <section id="singles" className="max-w-7xl mx-auto px-6 py-16 border-t-4 border-brand-black bg-white/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <h2 className="text-4xl font-black uppercase border-l-8 border-brand-yellow pl-4">Pick Your Singles</h2>
           
-          {/* Search Bar */}
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
@@ -105,14 +97,14 @@ export default function Home() {
                   {packName}
                 </h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                  {/* FIXED: Added : any type here to satisfy Vercel Build */}
                   {groupedStickers[packName].map((sticker: any) => (
                     <button
                       key={sticker.id}
                       onClick={() => addToCart({
                         id: `single-${sticker.id}`,
                         title: `${packName} #${sticker.sticker_number}`,
-                        price: sticker.price_tier === 'small' ? 'Rs. 35' : 'Rs. 50',
+                        // FIXED: Storing clean number strings for math accuracy
+                        price: sticker.price_tier === 'small' ? '35' : '50',
                         image_url: sticker.image_url,
                         isSingle: true,
                         stickerNumber: sticker.sticker_number,
